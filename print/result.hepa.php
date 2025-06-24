@@ -10,7 +10,7 @@
 	$co = $con->getArray("select * from companies where company_id = '$_SESSION[company]';");
 
 	$_ihead = $con->getArray("SELECT DATE_FORMAT(result_date,'%m/%d/%Y') AS rdate, b.patient_name, b.patient_address, c.gender as xgender, IF(c.gender='M','Male','Female') AS gender, c.gender as xgender, c.birthdate, b.physician, a.serialno,a.created_by,b.trace_no FROM lab_hepa a LEFT JOIN so_header b ON a.so_no = b.so_no AND a.branch = b.branch LEFT JOIN patient_info c ON b.patient_id = c.patient_id WHERE a.so_no = '$_REQUEST[so_no]' and a.serialno = '$_REQUEST[serialno]' AND a.branch = '$_SESSION[branchid]';");  
-    $b = $con->getArray("SELECT hepa_igg,hepa_igm,created_by,verified_by,verified FROM lab_hepa WHERE so_no = '$_REQUEST[so_no]' and branch = '$_SESSION[branchid]' and serialno = '$_REQUEST[serialno]';");
+    $b = $con->getArray("SELECT hepa_igg,hepa_igm,created_by,verified_by,verified,remarks FROM lab_hepa WHERE so_no = '$_REQUEST[so_no]' and branch = '$_SESSION[branchid]' and serialno = '$_REQUEST[serialno]';");
 	
 	list($testkit,$lotno,$xpire_d8) = $con->getArray("select testkit, lotno, date_format('%m/%d/%Y',expiry) as expiry_d8 from lab_samples where so_no = '$_REQUEST[so_no]' and serialno = '$_REQUEST[serialno]';");
 	

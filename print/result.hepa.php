@@ -10,22 +10,24 @@
 	$co = $con->getArray("select * from companies where company_id = '$_SESSION[company]';");
 
 	$_ihead = $con->getArray("SELECT DATE_FORMAT(result_date,'%m/%d/%Y') AS rdate, b.patient_name, b.patient_address, c.gender as xgender, IF(c.gender='M','Male','Female') AS gender, c.gender as xgender, c.birthdate, b.physician, a.serialno,a.created_by,b.trace_no FROM lab_hepa a LEFT JOIN so_header b ON a.so_no = b.so_no AND a.branch = b.branch LEFT JOIN patient_info c ON b.patient_id = c.patient_id WHERE a.so_no = '$_REQUEST[so_no]' and a.serialno = '$_REQUEST[serialno]' AND a.branch = '$_SESSION[branchid]';");  
-    $b = $con->getArray("SELECT hepa_igg,hepa_igm,verified_by,verified FROM lab_hepa WHERE so_no = '$_REQUEST[so_no]' and branch = '$_SESSION[branchid]' and serialno = '$_REQUEST[serialno]';");
+    $b = $con->getArray("SELECT hepa_igg,hepa_igm,created_by,verified_by,verified FROM lab_hepa WHERE so_no = '$_REQUEST[so_no]' and branch = '$_SESSION[branchid]' and serialno = '$_REQUEST[serialno]';");
 	
-	list($testkit,$lotno,$xpire_d8) = $con->getArray("select testkit, lotno, date_format(%m/%d/%Y,expiry) as expiry_d8 from lab_samples where so_no = '$_REQUEST[so_no]' and serialno = '$_REQUEST[serialno]';");
+	list($testkit,$lotno,$xpire_d8) = $con->getArray("select testkit, lotno, date_format('%m/%d/%Y',expiry) as expiry_d8 from lab_samples where so_no = '$_REQUEST[so_no]' and serialno = '$_REQUEST[serialno]';");
 	
-	if($b['verified_by'] != '') {
-        list($medtechSignature,$medtechFullname,$medtechLicense,$medtechRole) = $con->getArray("SELECT if(signature_file != '',concat('<img src=\"../images/signatures/',signature_file,'\" align=absmiddle />'),'<img src=\"../images/signatures/blank.png\" align=absmiddle />') as signature, fullname, license_no, role from user_info where emp_id = '$b[verified_by]';");
-    }	
-	
-	if($_ihead['physician'] != '') {
+	list($encSignature,$encBy,$encByLicense,$encByRole) = $con->getArray("SELECT if(signature_file != '',concat('<img style=\"position:absolute; top:-10px; z-index: -1;\" src=\"../images/signatures/',signature_file,'\" align=absmiddle />'),'<img src=\"../images/signatures/blank.png\" align=absmiddle />') as signature, fullname, license_no, role from user_info where emp_id = '$b[created_by]';");
+
+    if($b['verified_by'] != '') {
+        list($cbySignature,$cby,$cbyLicense,$cbyRole) = $con->getArray("SELECT if(signature_file != '',concat('<img src=\"../images/signatures/',signature_file,'\" align=absmiddle />'),'<img src=\"../images/signatures/blank.png\" align=absmiddle />') as signature, fullname, license_no, role from user_info where emp_id = '$b[verified_by]';");
+    }
+
+    if($_ihead['physician'] != '') {
         list($docSignature,$docFullName,$docprefix,$docSpec) = $con->getArray("SELECT IF(signature_file != '',CONCAT('<img src=\"../images/signatures/',signature_file,'\" align=absmiddle />'),'<img src=\"../images/signatures/blank.png\" align=absmiddle />') AS signature, fullname, concat(', ',prefix), specialization FROM options_doctors WHERE id = '$_ihead[physician]';");
     }
 
 	list($procedure) = $con->getArray("SELECT `description` FROM services_master WHERE `code` = '$_REQUEST[code]';");
 /* END OF SQL QUERIES */
 
-$mpdf=new mPDF('win-1252','FOLIO-H','','',10,10,72,30,5,5);
+$mpdf=new mPDF('win-1252','LETTER','','',10,10,90,30,10,10);
 $mpdf->use_embeddedfonts_1252 = true;    // false is default
 $mpdf->SetProtection(array('print'));
 $mpdf->SetAuthor("PORT80 Solutions");
@@ -33,6 +35,9 @@ $mpdf->SetAuthor("PORT80 Solutions");
 if($b['verified'] != 'Y') {
 	$mpdf->SetWatermarkText('FOR VALIDATION');
 	$mpdf->showWatermarkText = true;
+} else {
+	$mpdf->SetWatermarkImage ('../images/logo-small.png',0.1,'F','P');
+	$mpdf->showWatermarkImage = true;
 }
 
 $mpdf->SetDisplayMode(50);
@@ -95,20 +100,33 @@ $html = '
 		<td></td>
 		<td></td>
 	</tr>
+	<tr>
+        <td width="100%" colspan=4 style="padding-top: 30px;" align=center>
+         <span style="font-weight: bold; font-size: 12pt; color: #000000; text-decoration: underline;">&nbsp;&nbsp;&nbsp;IMMUNOLOGY & SEROLOGY&nbsp;&nbsp;&nbsp;</span>
+        </td>
+    </tr>
 </table>
 
 </htmlpageheader>
 
 <htmlpagefooter name="myfooter">
-<table width=100% cellpadding=5 style="margin-bottom: 25px;">
-	<tr>
-		<td align=center valign=top>'.$medtechSignature.'<br/><b>'.$medtechFullname.'<br/>___________________________________________<br>'.$medtechRole.'<br/>License No. '.$medtechLicense.'</b></td>
-		<td align=center valign=top><img src="../images/signatures/leyson.png" align=absmidddle /><br/><b>JEREMIAS P. LEYSON, MD, DPSP<br/>____________________________________________________________<br><b>PATHOLOGIST - LIC NO. 0124968</b></td>
-	</tr>
-</table>
-<table width=100%>
-	<tr><td align=left><barcode size=0.8 code="'.substr($_ihead['trace_no'],0,10).'" type="C128A"></td><td align=right>Run Date: '.date('m/d/Y h:i:s a').'</td></tr>
-</table>
+	<table width=100% cellpadding=5 style="margin-bottom: -55px;">
+        <tr>
+            <td width=33% align=center style="position:absolute; top:-10px;">'.$encSignature.'</td>
+            <td width=33% align=center style="position:absolute; top:-10px;">'.$cbySignature.'</td>
+            <td align=center valign=top style="position:absolute; top:-10px;"><img src="../images/signatures/leyson.png" align=absmidddle /></td>
+        </tr>
+    </table>
+    <table width=100% cellpadding=5 style="margin-bottom: 5px; font-size: 8pt;">
+        <tr>
+            <td width=33% align=center>&nbsp;<br/><b>'.$encBy.'<br/>_______________________________<br/><span>PRC LICENSE NO. '.$encByLicense.'</span><br/><b>REPORTED BY</b></td>
+            <td width=33% align=center>&nbsp;<br/><b>'.$cby.'<br/>_______________________________<br/><span>PRC LICENSE NO. '.$cbyLicense.'</span><br/><b>VALIDATED BY</b></td>
+            <td align=center valign=top>&nbsp;<br/><b>JEREMIAS P. LEYSON, MD, DPSP<br/> ____________________________________________________<br><b>PATHOLOGIST - LIC NO. 0124968</b></td>
+        </tr>
+    </table>
+	<table width=100%>
+		<tr><td align=left><barcode size=0.8 code="'.substr($_ihead['trace_no'],0,10).'" type="C128A"></td><td align=right>Run Date: '.date('m/d/Y h:i:s a').'</td></tr>
+	</table>
 </htmlpagefooter>
 
 <sethtmlpageheader name="myheader" value="on" show-this-page="1" />
